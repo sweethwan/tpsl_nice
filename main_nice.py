@@ -60,8 +60,9 @@ class TpslApp:
         self.table_container = None
         self.metrics_container = None
         
-        self.setup_ui()
-        self.setup_logger()
+        # UI Setup moved to @ui.page('/') handler
+        # self.setup_ui()
+        # self.setup_logger()
         
         # Start Update Loop
         self.update_timer = ui.timer(config['global_settings']['update_interval'], self.update_loop)
@@ -146,7 +147,7 @@ class TpslApp:
             ex_sums = {x: 0.0 for x in ["binance", "okx", "bithumb", "upbit"]}
             rows = []
 
-            for ex, client in self.clients.items():
+            for ex, client in list(self.clients.items()):
                 if not client: continue
                 
                 try:
@@ -272,6 +273,11 @@ class TpslApp:
             # Update UI
             self.update_dashboard(rows, total_krw, ex_sums)
 
+        except RuntimeError as e:
+            if "client" in str(e) and "deleted" in str(e):
+                pass # Ignore client deletion errors during reload
+            else:
+                self.text_log(f"Loop Runtime Error: {e}")
         except Exception as e:
             self.text_log(f"Loop Error: {e}")
 
@@ -378,7 +384,7 @@ class TpslApp:
             if res: 
                 self.text_log(f"Manual Sell {row_data['sym']} Success")
                 ui.notify(f"Sold {row_data['sym']}", type='positive')
-                self.add_trade_history(row_data['ex'], row_data['sym'], row_data['pnl_val'], "Manual")
+                self.add_trade_history(row_data['ex'], row_data['sym'], row_data['pnl_val'], row_data['revenue'], "Manual")
 
     def set_update_interval(self, e):
         config['global_settings']['update_interval'] = e.value
@@ -476,5 +482,10 @@ class TpslApp:
 
 # Init App
 app_instance = TpslApp()
+
+@ui.page('/')
+def index():
+    app_instance.setup_ui()
+    app_instance.setup_logger()
 
 ui.run(title='Crypto TPSL Bot', port=8080, dark=True)
