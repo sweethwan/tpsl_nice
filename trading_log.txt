@@ -1,0 +1,22 @@
+2026-02-07 12:30:22,965 - INFO - Update Interval changed to 2.0 sec
+2026-02-07 12:30:23,887 - INFO - Update Interval changed to 1.0 sec
+2026-02-07 12:30:35,517 - INFO - bithumb Connected. Mode: Spot
+2026-02-07 12:30:35,517 - INFO - Connected bithumb (spot)
+2026-02-07 13:04:26,536 - INFO - Loop Error: The client this element belongs to has been deleted.
+2026-02-07 13:05:32,265 - INFO - bithumb Connected. Mode: Spot
+2026-02-07 13:05:32,265 - INFO - Connected bithumb (spot)
+2026-02-07 13:05:54,396 - INFO - Disconnected bithumb
+2026-02-07 13:06:16,479 - INFO - binance Connected. Mode: Futures (USD-M)
+2026-02-07 13:06:16,480 - INFO - Connected binance (future)
+2026-02-07 13:10:46,223 - INFO - SOLD 0.028 of ETH/USDT:USDT on binance
+2026-02-07 13:10:46,224 - INFO - SOLD ETH/USDT:USDT (TP)
+2026-02-07 13:11:03,543 - INFO - Disconnected binance
+2026-02-07 13:19:03,909 - INFO - binance Connected. Mode: Futures (USD-M)
+2026-02-07 13:19:03,909 - INFO - Connected binance (future)
+2026-02-07 13:20:22,155 - INFO - SOLD 0.028 of ETH/USDT:USDT on binance
+2026-02-07 13:20:22,155 - INFO - SOLD ETH/USDT:USDT (SL)
+2026-02-07 13:24:17,885 - INFO - binance Connected. Mode: Futures (USD-M)
+2026-02-07 13:24:17,885 - INFO - Connected binance (future)
+2026-02-07 13:25:12,307 - INFO - SOLD 0.028 of ETH/USDT:USDT on binance
+2026-02-07 13:25:12,308 - INFO - SOLD ETH/USDT:USDT (SL)
+2026-02-07 13:25:38,051 - INFO - Global Switch: False
