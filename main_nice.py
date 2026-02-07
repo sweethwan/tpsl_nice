@@ -503,4 +503,4 @@ def index():
     app_instance.setup_ui()
     app_instance.setup_logger()
 
-ui.run(title='Crypto TPSL Bot', port=8080, dark=True)
+ui.run(title='Crypto TPSL Bot', port=8080, dark=True, host='127.0.0.1')
