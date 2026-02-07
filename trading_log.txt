@@ -20,3 +20,12 @@
 2026-02-07 13:25:12,307 - INFO - SOLD 0.028 of ETH/USDT:USDT on binance
 2026-02-07 13:25:12,308 - INFO - SOLD ETH/USDT:USDT (SL)
 2026-02-07 13:25:38,051 - INFO - Global Switch: False
+2026-02-07 19:36:50,594 - INFO - Global Switch: True
+2026-02-07 19:36:54,655 - INFO - upbit Connected. Mode: Spot
+2026-02-07 19:36:54,655 - INFO - Connected upbit (spot)
+2026-02-07 19:37:01,278 - INFO - bithumb Connected. Mode: Spot
+2026-02-07 19:37:01,278 - INFO - Connected bithumb (spot)
+2026-02-07 19:37:15,380 - INFO - okx Connected. Mode: Spot
+2026-02-07 19:37:15,380 - INFO - Connected okx (spot)
+2026-02-07 19:37:23,994 - INFO - binance Connected. Mode: Futures (USD-M)
+2026-02-07 19:37:23,994 - INFO - Connected binance (future)

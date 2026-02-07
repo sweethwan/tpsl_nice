@@ -65,7 +65,8 @@ class TpslApp:
         # self.setup_logger()
         
         # Start Update Loop
-        self.update_timer = ui.timer(config['global_settings']['update_interval'], self.update_loop)
+        # self.update_timer = ui.timer(config['global_settings']['update_interval'], self.update_loop)
+        # Using asyncio task instead of ui.timer to avoid global UI scope issues
 
         # Transaction History
         self.trade_history = []
@@ -120,6 +121,17 @@ class TpslApp:
         self.connected[ex] = False
         self.text_log(f"Disconnected {ex}")
         ui.notify(f"Disconnected {ex}", type='info')
+
+    async def run_background_loop(self):
+        while True:
+            try:
+                await self.update_loop()
+            except Exception as e:
+                print(f"Background Loop Error: {e}") # Fallback logging
+            
+            # Dynamic sleep based on current config
+            interval = config['global_settings'].get('update_interval', 5)
+            await asyncio.sleep(interval)
 
     async def update_loop(self):
         # Only run if connected to at least one exchange or manual refresh needed?
@@ -391,7 +403,7 @@ class TpslApp:
         self.save_config()
         self.text_log(f"Update Interval changed to {e.value} sec")
         # Update timer interval immediately
-        self.update_timer.interval = e.value
+        # self.update_timer.interval = e.value # No longer using ui.timer
 
     def setup_ui(self):
         ui.page_title('Crypto TPSL Bot (v5)')
@@ -482,6 +494,9 @@ class TpslApp:
 
 # Init App
 app_instance = TpslApp()
+
+# Start background loop
+app.on_startup(lambda: asyncio.create_task(app_instance.run_background_loop()))
 
 @ui.page('/')
 def index():

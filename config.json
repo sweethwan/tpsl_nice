@@ -43,7 +43,7 @@
         }
     },
     "global_settings": {
-        "auto_trading": false,
+        "auto_trading": true,
         "update_interval": 1.0
     },
     "hidden_coins": [
