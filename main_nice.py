@@ -669,5 +669,5 @@ def run_app():
     ui.run(title='Crypto TPSL Bot', port=8080, dark=True, host='127.0.0.1')
 
 
-if __name__ == '__main__':
+if __name__ in {'__main__', '__mp_main__'}:
     run_app()
