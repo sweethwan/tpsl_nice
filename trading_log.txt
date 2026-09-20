@@ -226,3 +226,10 @@
 2026-09-20 10:26:45,475 - INFO - Connected bithumb (spot)
 2026-09-20 10:26:49,069 - INFO - upbit Connected. Mode: Spot
 2026-09-20 10:26:49,070 - INFO - Connected upbit (spot)
+2026-09-20 11:01:04,671 - INFO - okx Connected. Mode: Spot
+2026-09-20 11:01:04,679 - INFO - okx Connected. Mode: Spot
+2026-09-20 11:01:04,680 - INFO - Connected okx (spot, future)
+2026-09-20 11:01:44,780 - INFO - bithumb Connected. Mode: Spot
+2026-09-20 11:01:44,781 - INFO - Connected bithumb (spot)
+2026-09-20 11:06:13,446 - INFO - upbit Connected. Mode: Spot
+2026-09-20 11:06:13,446 - INFO - Connected upbit (spot)

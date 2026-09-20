@@ -40,6 +40,15 @@ class FakeExchange:
                 'symbol': 'BTC/USDT:USDT-OPTION', 'contracts': 1, 'side': 'long',
                 'settle': 'USDT', 'linear': True, 'type': 'option',
             },
+            {
+                # Shape returned by the installed CCXT OKX adapter: market
+                # metadata is absent from the normalized position but present in
+                # ``info`` and the settlement is encoded in the symbol.
+                'symbol': 'AVAX/USDT:USDT', 'contracts': 42, 'side': 'long',
+                'entryPrice': 20.0, 'markPrice': 21.0, 'notional': 882.0,
+                'unrealizedPnl': 42.0, 'settle': None, 'linear': None,
+                'type': None, 'info': {'instType': 'SWAP', 'posSide': 'net'},
+            },
         ]
 
     def create_order(self, symbol, order_type, side, amount, price, params):
@@ -59,6 +68,7 @@ class FakeDashboardClient:
     def fetch_balance(self, account_type):
         return pd.DataFrame([
             {'Symbol': 'USDT', 'Free': 100.0, 'Used': 0.0, 'Total': 100.0, 'AvgPrice': 0.0},
+            {'Symbol': 'USDC', 'Free': 1.0, 'Used': 0.0, 'Total': 1.0, 'AvgPrice': 0.0},
             {'Symbol': 'BTC', 'Free': 0.1, 'Used': 0.0, 'Total': 0.1, 'AvgPrice': 20000.0},
         ])
 
@@ -70,6 +80,23 @@ class FakeDashboardClient:
                 'UnrealizedPnl': 2000.0, 'ContractSize': 1.0,
                 'Side': 'short', 'Hedged': True,
             },
+            {
+                'Symbol': 'DOGE/USDT:USDT', 'Total': 1.0, 'AvgPrice': 10.0,
+                'MarkPrice': 10.0, 'Notional': 10.0,
+                'UnrealizedPnl': 0.0, 'ContractSize': 1.0,
+                'Side': 'long', 'Hedged': False,
+            },
+        ])
+
+    def fetch_ticker(self, symbol):
+        return 20000.0
+
+
+class FakeDomesticDashboardClient:
+    def fetch_balance(self, account_type):
+        return pd.DataFrame([
+            {'Symbol': 'KRW', 'Free': 100000.0, 'Used': 0.0, 'Total': 100000.0, 'AvgPrice': 0.0},
+            {'Symbol': 'SOL', 'Free': 1.0, 'Used': 0.0, 'Total': 1.0, 'AvgPrice': 20000.0},
         ])
 
     def fetch_ticker(self, symbol):
@@ -88,11 +115,12 @@ class CryptoLogicTests(unittest.TestCase):
     def test_fetch_positions_keeps_only_usdt_linear_futures(self):
         dataframe = logic_with(FakeExchange()).fetch_positions()
 
-        self.assertEqual(len(dataframe), 1)
-        position = dataframe.iloc[0]
+        self.assertEqual(len(dataframe), 2)
+        position = dataframe[dataframe['Symbol'] == 'BTC/USDT:USDT'].iloc[0]
         self.assertEqual(position['Symbol'], 'BTC/USDT:USDT')
         self.assertEqual(position['Side'], 'long')
         self.assertEqual(position['Notional'], 220.0)
+        self.assertIn('AVAX/USDT:USDT', dataframe['Symbol'].tolist())
 
     def test_close_futures_position_uses_reduce_only_and_opposite_side(self):
         exchange = FakeExchange()
@@ -122,11 +150,29 @@ class DashboardRowsTests(unittest.TestCase):
             dashboard._build_futures_rows('binance', client, 1000.0)
         )
 
-        self.assertEqual([row['kind'] for row in wallet_rows], ['현물 현금', '현물'])
-        self.assertEqual(wallet_total, 2_100_000.0)
+        # USDT is hidden by currency rule and the visible USDC is hidden because
+        # it is worth $1.  Both still contribute to the asset total.
+        self.assertEqual([row['sym'] for row in wallet_rows], ['BTC'])
+        self.assertEqual(wallet_total, 2_101_000.0)
         self.assertEqual(futures_rows[0]['kind'], '선물 포지션 · SHORT')
         self.assertEqual(futures_rows[0]['pnl_val'], -5.0)
         self.assertEqual(futures_rows[0]['revenue'], 2_000_000.0)
+        self.assertEqual(len(futures_rows), 1)
+        self.assertEqual(wallet_rows[0]['status'], 'auto_off')
+        self.assertEqual(TpslApp._status_presentation('auto_off'), ('⚫', '자동매매 꺼짐'))
+
+    def test_krw_is_hidden_but_remains_in_total_assets(self):
+        dashboard = TpslApp()
+        dashboard.running = False
+
+        rows, total = asyncio.run(
+            dashboard._build_balance_rows(
+                'bithumb', FakeDomesticDashboardClient(), 'spot', None, '현물', 1000.0
+            )
+        )
+
+        self.assertEqual([row['sym'] for row in rows], ['SOL'])
+        self.assertEqual(total, 120000.0)
 
 
 if __name__ == '__main__':

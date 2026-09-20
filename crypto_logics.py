@@ -206,12 +206,20 @@ class CryptoLogic:
                 if contracts == 0:
                     continue
 
+                symbol = str(pos.get('symbol') or '')
+                if not symbol:
+                    continue
+
                 settle = str(
                     pos.get('settle')
                     or info.get('settleCcy')
                     or info.get('marginAsset')
                     or ''
                 ).upper()
+                # OKX responses in some CCXT versions omit the normalized market
+                # fields but retain the settlement currency in the unified symbol.
+                if not settle and symbol.upper().endswith(':USDT'):
+                    settle = 'USDT'
                 position_type = str(pos.get('type') or info.get('instType') or '').lower()
                 linear = pos.get('linear')
 
@@ -220,9 +228,6 @@ class CryptoLogic:
                 if settle != 'USDT' or linear is False or position_type not in ('swap', 'future'):
                     continue
 
-                symbol = pos.get('symbol')
-                if not symbol:
-                    continue
                 side = str(pos.get('side') or '').lower()
                 if side not in ('long', 'short'):
                     side = 'short' if signed_contracts < 0 else 'long'

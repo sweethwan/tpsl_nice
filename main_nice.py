@@ -237,6 +237,17 @@ class TpslApp:
     def _format_price(value):
         return f"{value:.4f}" if value > 0 else '-'
 
+    @staticmethod
+    def _status_presentation(status):
+        presentations = {
+            'active': ('🟢', 'active'),
+            'auto_off': ('⚫', '자동매매 꺼짐'),
+            'SOLD': ('🔵', 'SOLD'),
+            'wallet': ('💼', 'wallet'),
+            'wait': ('⚪', 'wait'),
+        }
+        return presentations.get(status, ('⚪', status))
+
     def _is_whitelisted(self, ex, symbol):
         whitelist = config['exchanges'][ex].get('whitelist', [])
         if isinstance(whitelist, str):
@@ -281,9 +292,7 @@ class TpslApp:
 
             rate = 1.0 if is_domestic else usdt_krw
             value_krw = amount * current_price * rate
-            # Keep cash rows visible; dust tokens remain suppressed when priced.
-            if current_price > 0 and value_krw < 10000 and not is_cash:
-                continue
+            value_usd = value_krw / usdt_krw if usdt_krw > 0 else 0.0
 
             avg_price = self._as_float(balance.get('AvgPrice'))
             pnl_pct = 0.0
@@ -318,8 +327,14 @@ class TpslApp:
                 'action': 'sell' if client_scope == 'spot' and market_symbol else None,
             }
             row['status'] = await self._apply_tpsl(ex, client, row)
-            rows.append(row)
+            # The table filter must not change total assets or stop automatic
+            # SL/TP evaluation.  USDT/KRW are cash components of the total but are
+            # intentionally omitted from the detail view.
             balance_total += value_krw
+            is_hidden_cash = symbol in {'USDT', 'KRW'}
+            is_small_balance = current_price > 0 and value_usd <= 10.0
+            if not is_hidden_cash and not is_small_balance:
+                rows.append(row)
 
         return rows, balance_total
 
@@ -383,7 +398,10 @@ class TpslApp:
             # Futures notional is display-only and is intentionally excluded from
             # total_krw/ex_sums to avoid counting leveraged exposure as cash.
             row['status'] = await self._apply_tpsl(ex, client, row)
-            rows.append(row)
+            # A position is hidden only in the table; its SL/TP evaluation above
+            # still runs so the visibility filter cannot alter trading behavior.
+            if notional <= 0 or notional > 10.0:
+                rows.append(row)
 
         return rows
 
@@ -391,7 +409,7 @@ class TpslApp:
         if not row.get('action'):
             return 'wallet'
         if not self.running:
-            return 'off'
+            return 'auto_off'
         if not self._is_whitelisted(ex, row['sym']):
             return 'wait'
 
@@ -487,9 +505,8 @@ class TpslApp:
                     pnl_class = 'text-green-400' if r['pnl_val'] > 0 else 'text-red-400' if r['pnl_val'] < 0 else 'text-gray-400'
                     ui.label(r['pnl']).classes(f'w-1/12 font-bold {pnl_class}')
                     
-                    # Status Icon
-                    status_icon = '🟢' if r['status'] == 'active' else '🔴' if r['status'] == 'off' else '🔵' if r['status'] == 'SOLD' else '💼' if r['status'] == 'wallet' else '⚪'
-                    ui.label(f"{status_icon} {r['status']}").classes('w-1/12 text-xs')
+                    status_icon, status_label = self._status_presentation(r['status'])
+                    ui.label(f"{status_icon} {status_label}").classes('w-1/12 text-xs')
                     
                     # Action Button
                     with ui.column().classes('w-1/12'):
