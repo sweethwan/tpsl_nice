@@ -52,6 +52,7 @@ class TpslApp:
     def __init__(self):
         self.running = config['global_settings']['auto_trading']
         self.hidden_coins = set()
+        self.logger = logging.getLogger("TradingBot")
         self.clients = {}
         self.connected = {ex: False for ex in ["binance", "okx", "bithumb", "upbit"]}
         
@@ -59,6 +60,7 @@ class TpslApp:
         self.log_area = None
         self.table_container = None
         self.metrics_container = None
+        self.history_container = None
         
         # UI Setup moved to @ui.page('/') handler
         # self.setup_ui()
@@ -102,22 +104,40 @@ class TpslApp:
 
     def connect_exchange(self, ex):
         creds = config['exchanges'][ex]
-        mtype = creds.get('market_type', 'spot')
-        try:
-            client = CryptoLogic(ex, creds['api_key'], creds['secret_key'], creds.get('password'), mtype)
-            if client.exchange:
-                self.clients[ex] = client
-                self.connected[ex] = True
-                self.text_log(f"Connected {ex} ({mtype})")
-                ui.notify(f"Connected {ex}", type='positive')
-            else:
-                ui.notify(f"Failed to connect {ex}", type='negative')
-        except Exception as e:
-            self.text_log(f"Connection Error {ex}: {e}")
-            ui.notify(f"Error {ex}", type='negative')
+        # Binance and OKX are queried in parallel for spot and USDT futures.
+        # The old market_type setting is kept only for configuration compatibility.
+        client_specs = [('spot', 'spot')]
+        if ex == 'binance':
+            client_specs.append(('future', 'future'))
+        elif ex == 'okx':
+            client_specs.append(('future', 'swap'))
+
+        clients = {}
+        for account_scope, market_type in client_specs:
+            try:
+                client = CryptoLogic(
+                    ex,
+                    creds['api_key'],
+                    creds['secret_key'],
+                    creds.get('password'),
+                    market_type,
+                )
+                if client.exchange:
+                    clients[account_scope] = client
+            except Exception as e:
+                self.text_log(f"Connection Error {ex} ({account_scope}): {e}")
+
+        self.clients[ex] = clients
+        self.connected[ex] = bool(clients)
+        if clients:
+            scopes = ', '.join(clients.keys())
+            self.text_log(f"Connected {ex} ({scopes})")
+            ui.notify(f"Connected {ex}: {scopes}", type='positive')
+        else:
+            ui.notify(f"Failed to connect {ex}", type='negative')
             
     def disconnect_exchange(self, ex):
-        self.clients[ex] = None
+        self.clients.pop(ex, None)
         self.connected[ex] = False
         self.text_log(f"Disconnected {ex}")
         ui.notify(f"Disconnected {ex}", type='info')
@@ -134,15 +154,10 @@ class TpslApp:
             await asyncio.sleep(interval)
 
     async def update_loop(self):
-        # Only run if connected to at least one exchange or manual refresh needed?
-        # Actually in NiceGUI we want real-time updates if possible.
-        # But we respect the interval.
-        
         if not any(self.connected.values()):
             return
 
         try:
-            # 1. Fetch Rate
             usdt_krw = 1400.0
             try:
                 # Simple cache logic or fetch every time? 
@@ -159,128 +174,40 @@ class TpslApp:
             ex_sums = {x: 0.0 for x in ["binance", "okx", "bithumb", "upbit"]}
             rows = []
 
-            for ex, client in list(self.clients.items()):
-                if not client: continue
-                
-                try:
-                    is_future = (config['exchanges'][ex].get('market_type') == 'future')
-                    df = pd.DataFrame()
-
-                    if is_future:
-                        # Async wrapper for blocking calls
-                        pos_df = await asyncio.to_thread(client.fetch_positions)
-                        bal_df = await asyncio.to_thread(client.fetch_balance)
-                        df = pd.concat([pos_df, bal_df], ignore_index=True)
-                    else:
-                        df = await asyncio.to_thread(client.fetch_balance)
-                except Exception as e:
-                    self.text_log(f"Fetch Error {ex}: {e}")
+            for ex, exchange_clients in list(self.clients.items()):
+                if not exchange_clients:
                     continue
 
-                if not df.empty:
-                    for i, row in df.iterrows():
-                        sym = row['Symbol']
-                        amt = row['Total']
-                        if amt == 0: continue
+                # A Binance futures wallet is distinct from the spot wallet.  OKX
+                # uses a unified trading wallet, so it is fetched once to avoid
+                # counting the same collateral twice.
+                if ex == 'binance':
+                    balance_specs = [
+                        ('spot', 'spot', '현물'),
+                        ('future', 'future', '선물 증거금'),
+                    ]
+                elif ex == 'okx':
+                    balance_specs = [('spot', 'trading', 'OKX 거래계정')]
+                else:
+                    balance_specs = [('spot', None, '현물')]
 
-                        # Filter Ignored Symbols (Points, Airdrops, etc)
-                        if sym in ['P', 'POINT', 'APENFT']:
-                            continue
+                for client_scope, account_type, account_label in balance_specs:
+                    client = exchange_clients.get(client_scope)
+                    if not client:
+                        continue
+                    balance_rows, balance_total = await self._build_balance_rows(
+                        ex, client, client_scope, account_type, account_label, usdt_krw
+                    )
+                    rows.extend(balance_rows)
+                    ex_sums[ex] += balance_total
+                    total_krw += balance_total
 
-                        # Value Calc Logic similar to Streamlit
-                        is_domestic = ex in ['bithumb', 'upbit']
-                        
-                        # Filter Quote Assets from Dashboard
-                        if (is_domestic and sym == 'KRW') or (not is_domestic and sym == 'USDT'):
-                             # But we still need to add to Total Assets
-                             val = amt * (1.0 if sym=='KRW' else usdt_krw)
-                             ex_sums[ex] += val
-                             total_krw += val
-                             continue
-
-                        # Market Symbol
-                        market_sym = f"{sym}/USDT" if ex in ['binance','okx'] else f"{sym}/KRW"
-                        cur_price = 0.0
-                        
-                        if is_future:
-                             if '/' in sym: market_sym = sym
-                             elif sym in ['USDT', 'BUSD']: 
-                                 cur_price = 1.0; market_sym = None
-
-                        # Fetch Price
-                        if market_sym:
-                            try:
-                                cur_price = await asyncio.to_thread(client.fetch_ticker, market_sym) or 0.0
-                            except: cur_price = 0.0
-                        elif sym in ['USDT','USDC']: cur_price = 1.0
-
-                        avg_price = row.get('AvgPrice', 0)
-                        val_native = amt * cur_price
-                        rate = 1.0 if is_domestic else usdt_krw
-                        val_krw = val_native * rate
-
-                        # Filter Small Amounts (< 10,000 KRW)
-                        if val_krw < 10000: continue
-
-                        ex_sums[ex] += val_krw
-                        total_krw += val_krw
-                        
-                        # Binance Futures Position handling (adjust total)
-                        if ex == 'binance' and is_future and '/' in sym:
-                            ex_sums[ex] -= val_krw
-                            total_krw -= val_krw
-
-
-                        # PNL
-                        pnl_pct = 0.0
-                        pnl_amt_krw = 0.0
-                        if avg_price > 0 and cur_price > 0 and market_sym:
-                            pnl_pct = ((cur_price - avg_price) / avg_price) * 100
-                            pnl_amt_krw = (cur_price - avg_price) * amt * rate
-
-                        # Auto Trade Logic
-                        triggers = []
-                        # Check Whitelist
-                        wl = config['exchanges'][ex].get('whitelist', [])
-                        base_sym = sym.split('/')[0] if '/' in sym else sym
-                        in_wl = not wl or (sym.upper() in wl or base_sym.upper() in wl)
-
-                        status_ui = "wait"
-                        
-                        if self.running and in_wl and market_sym:
-                            sl_enabled = config['exchanges'][ex]['sl_enabled']
-                            tp_enabled = config['exchanges'][ex]['tp_enabled']
-                            sl_limit = config['exchanges'][ex]['sl']
-                            tp_limit = config['exchanges'][ex]['tp']
-
-                            if sl_enabled and pnl_pct <= -sl_limit:
-                                triggers.append("SL")
-                                res = await asyncio.to_thread(client.create_market_sell_order, market_sym, amt)
-                                if res: 
-                                    self.text_log(f"SOLD {sym} (SL)")
-                                    self.add_trade_history(ex, sym, pnl_pct, pnl_amt_krw, "SL")
-                            
-                            if tp_enabled and pnl_pct >= tp_limit:
-                                triggers.append("TP")
-                                res = await asyncio.to_thread(client.create_market_sell_order, market_sym, amt)
-                                if res: 
-                                    self.text_log(f"SOLD {sym} (TP)")
-                                    self.add_trade_history(ex, sym, pnl_pct, pnl_amt_krw, "TP")
-
-                        if triggers: status_ui = "SOLD"
-                        elif self.running and in_wl: status_ui = "active"
-                        elif not self.running: status_ui = "off"
-
-                        rows.append({
-                            'ex': ex, 'sym': sym, 'amt': f"{amt:.4f}",
-                            'val': f"₩{val_krw:,.0f}",
-                            'avg': f"{avg_price:.4f}", 'cur': f"{cur_price:.4f}",
-                            'pnl': f"{pnl_pct:.2f}%", 'pnl_val': pnl_pct,
-                            'revenue': pnl_amt_krw,
-                            'status': status_ui,
-                            'market': market_sym,
-                            'raw_amt': amt
-                        })
+                if ex in ('binance', 'okx'):
+                    future_client = exchange_clients.get('future')
+                    if future_client:
+                        rows.extend(
+                            await self._build_futures_rows(ex, future_client, usdt_krw)
+                        )
 
             # Update UI
             self.update_dashboard(rows, total_krw, ex_sums)
@@ -292,6 +219,211 @@ class TpslApp:
                 self.text_log(f"Loop Runtime Error: {e}")
         except Exception as e:
             self.text_log(f"Loop Error: {e}")
+
+    @staticmethod
+    def _as_float(value, default=0.0):
+        try:
+            return float(value) if value is not None else default
+        except (TypeError, ValueError):
+            return default
+
+    @staticmethod
+    def _is_cash_symbol(symbol, is_domestic):
+        if is_domestic:
+            return symbol == 'KRW'
+        return symbol in {'USDT', 'USDC', 'BUSD', 'DAI'}
+
+    @staticmethod
+    def _format_price(value):
+        return f"{value:.4f}" if value > 0 else '-'
+
+    def _is_whitelisted(self, ex, symbol):
+        whitelist = config['exchanges'][ex].get('whitelist', [])
+        if isinstance(whitelist, str):
+            whitelist = [item.strip().upper() for item in whitelist.split(',') if item.strip()]
+        if not whitelist:
+            return True
+        base_symbol = symbol.split('/')[0].upper()
+        return symbol.upper() in whitelist or base_symbol in whitelist
+
+    async def _build_balance_rows(self, ex, client, client_scope, account_type, account_label, usdt_krw):
+        try:
+            df = await asyncio.to_thread(client.fetch_balance, account_type)
+        except Exception as e:
+            self.text_log(f"Fetch Error {ex} {client_scope} balance: {e}")
+            return [], 0.0
+
+        if df.empty:
+            return [], 0.0
+
+        rows = []
+        balance_total = 0.0
+        is_domestic = ex in ('bithumb', 'upbit')
+        for _, balance in df.iterrows():
+            symbol = str(balance.get('Symbol', '')).upper()
+            amount = self._as_float(balance.get('Total'))
+            if not symbol or amount <= 0 or symbol in {'P', 'POINT', 'APENFT'}:
+                continue
+
+            is_cash = self._is_cash_symbol(symbol, is_domestic)
+            market_symbol = None
+            current_price = 0.0
+            if is_cash:
+                current_price = 1.0
+            else:
+                market_symbol = f"{symbol}/KRW" if is_domestic else f"{symbol}/USDT"
+                try:
+                    current_price = self._as_float(
+                        await asyncio.to_thread(client.fetch_ticker, market_symbol)
+                    )
+                except Exception as e:
+                    self.text_log(f"Price Error {ex} {symbol}: {e}")
+
+            rate = 1.0 if is_domestic else usdt_krw
+            value_krw = amount * current_price * rate
+            # Keep cash rows visible; dust tokens remain suppressed when priced.
+            if current_price > 0 and value_krw < 10000 and not is_cash:
+                continue
+
+            avg_price = self._as_float(balance.get('AvgPrice'))
+            pnl_pct = 0.0
+            pnl_krw = 0.0
+            if avg_price > 0 and current_price > 0:
+                pnl_pct = ((current_price - avg_price) / avg_price) * 100
+                pnl_krw = (current_price - avg_price) * amount * rate
+
+            kind = account_label
+            if client_scope == 'spot' and account_label == '현물' and is_cash:
+                kind = '현물 현금'
+            if client_scope == 'future' and is_cash:
+                kind = '선물 증거금'
+
+            row = {
+                'ex': ex,
+                'kind': kind,
+                'sym': symbol,
+                'amt': f"{amount:.4f}",
+                'val': f"₩{value_krw:,.0f}" if current_price > 0 else '가격 조회 실패',
+                'avg': self._format_price(avg_price),
+                'cur': self._format_price(current_price),
+                'pnl': f"{pnl_pct:.2f}%",
+                'pnl_val': pnl_pct,
+                'revenue': pnl_krw,
+                'market': market_symbol,
+                'raw_amt': amount,
+                'client_scope': client_scope,
+                'is_future': False,
+                'side': None,
+                'hedged': False,
+                'action': 'sell' if client_scope == 'spot' and market_symbol else None,
+            }
+            row['status'] = await self._apply_tpsl(ex, client, row)
+            rows.append(row)
+            balance_total += value_krw
+
+        return rows, balance_total
+
+    async def _build_futures_rows(self, ex, client, usdt_krw):
+        try:
+            df = await asyncio.to_thread(client.fetch_positions)
+        except Exception as e:
+            self.text_log(f"Fetch Error {ex} futures positions: {e}")
+            return []
+
+        if df.empty:
+            return []
+
+        rows = []
+        for _, position in df.iterrows():
+            symbol = str(position.get('Symbol', ''))
+            contracts = self._as_float(position.get('Total'))
+            if not symbol or contracts <= 0:
+                continue
+
+            side = str(position.get('Side', 'long')).lower()
+            if side not in ('long', 'short'):
+                side = 'long'
+            entry_price = self._as_float(position.get('AvgPrice'))
+            mark_price = self._as_float(position.get('MarkPrice'))
+            if mark_price <= 0:
+                try:
+                    mark_price = self._as_float(await asyncio.to_thread(client.fetch_ticker, symbol))
+                except Exception as e:
+                    self.text_log(f"Price Error {ex} {symbol}: {e}")
+
+            notional = abs(self._as_float(position.get('Notional')))
+            if notional <= 0 and mark_price > 0:
+                notional = contracts * self._as_float(position.get('ContractSize'), 1.0) * mark_price
+
+            pnl_pct = 0.0
+            if entry_price > 0 and mark_price > 0:
+                price_change_pct = ((mark_price - entry_price) / entry_price) * 100
+                pnl_pct = price_change_pct if side == 'long' else -price_change_pct
+            pnl_krw = self._as_float(position.get('UnrealizedPnl')) * usdt_krw
+
+            row = {
+                'ex': ex,
+                'kind': f"선물 포지션 · {side.upper()}",
+                'sym': symbol,
+                'amt': f"{contracts:.4f}",
+                'val': f"₩{notional * usdt_krw:,.0f}" if notional > 0 else '가격 조회 실패',
+                'avg': self._format_price(entry_price),
+                'cur': self._format_price(mark_price),
+                'pnl': f"{pnl_pct:.2f}%",
+                'pnl_val': pnl_pct,
+                'revenue': pnl_krw,
+                'market': symbol,
+                'raw_amt': contracts,
+                'client_scope': 'future',
+                'is_future': True,
+                'side': side,
+                'hedged': bool(position.get('Hedged', False)),
+                'action': 'close',
+            }
+            # Futures notional is display-only and is intentionally excluded from
+            # total_krw/ex_sums to avoid counting leveraged exposure as cash.
+            row['status'] = await self._apply_tpsl(ex, client, row)
+            rows.append(row)
+
+        return rows
+
+    async def _apply_tpsl(self, ex, client, row):
+        if not row.get('action'):
+            return 'wallet'
+        if not self.running:
+            return 'off'
+        if not self._is_whitelisted(ex, row['sym']):
+            return 'wait'
+
+        settings = config['exchanges'][ex]
+        trigger = None
+        if settings.get('sl_enabled', True) and row['pnl_val'] <= -self._as_float(settings.get('sl')):
+            trigger = 'SL'
+        elif settings.get('tp_enabled', True) and row['pnl_val'] >= self._as_float(settings.get('tp')):
+            trigger = 'TP'
+        if not trigger:
+            return 'active'
+
+        if row['is_future']:
+            result = await asyncio.to_thread(
+                client.close_futures_position,
+                row['market'],
+                row['raw_amt'],
+                row['side'],
+                row['hedged'],
+            )
+            action_name = 'CLOSED'
+        else:
+            result = await asyncio.to_thread(
+                client.create_market_sell_order, row['market'], row['raw_amt']
+            )
+            action_name = 'SOLD'
+
+        if result:
+            self.text_log(f"{action_name} {row['sym']} ({trigger})")
+            self.add_trade_history(ex, row['sym'], row['pnl_val'], row['revenue'], trigger)
+            return 'SOLD'
+        return 'active'
 
     def add_trade_history(self, ex, sym, pnl, revenue, type_):
         ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -309,6 +441,10 @@ class TpslApp:
         self.update_history_table()
 
     def update_dashboard(self, rows, total_krw, ex_sums):
+        # The background task starts before a browser opens the page.
+        if self.metrics_container is None or self.table_container is None:
+            return
+
         # Update Metrics
         self.metrics_container.clear()
         with self.metrics_container:
@@ -322,6 +458,7 @@ class TpslApp:
             # Header
             with ui.row().classes('w-full bg-slate-700 p-2 rounded text-xs font-bold text-gray-300'):
                 ui.label('Ex').classes('w-1/12')
+                ui.label('Type').classes('w-2/12')
                 ui.label('Coin').classes('w-1/12')
                 ui.label('Amt').classes('w-1/12')
                 ui.label('Value').classes('w-2/12')
@@ -339,6 +476,7 @@ class TpslApp:
                 
                 with ui.row().classes(f'w-full {bg_color} p-2 border-b border-gray-700 items-center text-sm hover:bg-slate-700 transition'):
                     ui.label(r['ex'].upper()).classes('w-1/12 pl-1')
+                    ui.label(r['kind']).classes('w-2/12 text-xs text-cyan-300')
                     ui.label(r['sym']).classes('w-1/12 font-bold')
                     ui.label(r['amt']).classes('w-1/12 text-xs')
                     ui.label(r['val']).classes('w-2/12 text-gray-300')
@@ -350,17 +488,24 @@ class TpslApp:
                     ui.label(r['pnl']).classes(f'w-1/12 font-bold {pnl_class}')
                     
                     # Status Icon
-                    status_icon = '🟢' if r['status'] == 'active' else '🔴' if r['status'] == 'off' else '🔵' if r['status'] == 'SOLD' else '⚪'
+                    status_icon = '🟢' if r['status'] == 'active' else '🔴' if r['status'] == 'off' else '🔵' if r['status'] == 'SOLD' else '💼' if r['status'] == 'wallet' else '⚪'
                     ui.label(f"{status_icon} {r['status']}").classes('w-1/12 text-xs')
                     
                     # Action Button
                     with ui.column().classes('w-1/12'):
-                         ui.button('Sell', on_click=lambda _, x=r: self.manual_sell(x)).props('dense flat color=red size=sm icon=currency_exchange')
+                        if r['action'] == 'close':
+                            ui.button('Close', on_click=lambda _, x=r: self.manual_action(x)).props('dense flat color=red size=sm icon=close')
+                        elif r['action'] == 'sell':
+                            ui.button('Sell', on_click=lambda _, x=r: self.manual_action(x)).props('dense flat color=red size=sm icon=currency_exchange')
+                        else:
+                            ui.label('-').classes('text-gray-500')
 
         # Update History Table
         self.update_history_table()
 
     def update_history_table(self):
+        if self.history_container is None:
+            return
         self.history_container.clear()
         with self.history_container:
              # Header
@@ -389,14 +534,35 @@ class TpslApp:
                      ui.label(h['type']).classes(f'w-1/6 font-bold {type_color}')
 
 
-    async def manual_sell(self, row_data):
-        client = self.clients.get(row_data['ex'])
-        if client:
-            res = await asyncio.to_thread(client.create_market_sell_order, row_data['market'], row_data['raw_amt'])
-            if res: 
-                self.text_log(f"Manual Sell {row_data['sym']} Success")
-                ui.notify(f"Sold {row_data['sym']}", type='positive')
-                self.add_trade_history(row_data['ex'], row_data['sym'], row_data['pnl_val'], row_data['revenue'], "Manual")
+    async def manual_action(self, row_data):
+        client = self.clients.get(row_data['ex'], {}).get(row_data['client_scope'])
+        if not client:
+            ui.notify(f"No active client for {row_data['ex']}", type='negative')
+            return
+
+        if row_data['is_future']:
+            res = await asyncio.to_thread(
+                client.close_futures_position,
+                row_data['market'],
+                row_data['raw_amt'],
+                row_data['side'],
+                row_data['hedged'],
+            )
+            action_name = 'Closed'
+        else:
+            res = await asyncio.to_thread(
+                client.create_market_sell_order, row_data['market'], row_data['raw_amt']
+            )
+            action_name = 'Sold'
+
+        if res:
+            self.text_log(f"Manual {action_name} {row_data['sym']} Success")
+            ui.notify(f"{action_name} {row_data['sym']}", type='positive')
+            self.add_trade_history(
+                row_data['ex'], row_data['sym'], row_data['pnl_val'], row_data['revenue'], 'Manual'
+            )
+        else:
+            ui.notify(f"Failed to {action_name.lower()} {row_data['sym']}", type='negative')
 
     def set_update_interval(self, e):
         config['global_settings']['update_interval'] = e.value
@@ -431,9 +597,8 @@ class TpslApp:
             for ex in ["binance", "okx", "bithumb", "upbit"]:
                 with ui.expansion(ex.upper(), icon='currency_exchange').classes('w-full mb-2 bg-slate-700 rounded'):
                     with ui.column().classes('w-full q-pa-sm'):
-                        # Market Type (Binance Only)
-                        if ex == 'binance':
-                            ui.select(['spot', 'future'], value=config['exchanges'][ex]['market_type'], label='Market Type').bind_value(config['exchanges'][ex], 'market_type').on_value_change(self.save_config).classes('w-full')
+                        if ex in ('binance', 'okx'):
+                            ui.label('Spot + USDT Futures/Swap are refreshed together').classes('text-xs text-cyan-300')
                         
                         # Creds
                         ui.input('API Key').bind_value(config['exchanges'][ex], 'api_key').props('type=password dense').classes('w-full')
@@ -492,15 +657,17 @@ class TpslApp:
         self.save_config()
         ui.notify(f"{ex} Keys Saved", type='positive')
 
-# Init App
-app_instance = TpslApp()
+def run_app():
+    app_instance = TpslApp()
+    app.on_startup(lambda: asyncio.create_task(app_instance.run_background_loop()))
 
-# Start background loop
-app.on_startup(lambda: asyncio.create_task(app_instance.run_background_loop()))
+    @ui.page('/')
+    def index():
+        app_instance.setup_ui()
+        app_instance.setup_logger()
 
-@ui.page('/')
-def index():
-    app_instance.setup_ui()
-    app_instance.setup_logger()
+    ui.run(title='Crypto TPSL Bot', port=8080, dark=True, host='127.0.0.1')
 
-ui.run(title='Crypto TPSL Bot', port=8080, dark=True, host='127.0.0.1')
+
+if __name__ == '__main__':
+    run_app()

@@ -82,9 +82,20 @@ class CryptoLogic:
             'Content-Type': 'application/json'
         }
 
-    def fetch_balance(self):
+    @staticmethod
+    def _to_float(value, default=0.0):
+        """Convert CCXT's optional numeric fields without leaking parser errors."""
+        try:
+            return float(value) if value is not None else default
+        except (TypeError, ValueError):
+            return default
+
+    def fetch_balance(self, account_type=None):
         """
         Returns a DataFrame with columns: ['Symbol', 'Free', 'Used', 'Total']
+
+        ``account_type`` is passed through to CCXT as ``params['type']``.  Binance
+        accepts values such as ``spot`` and ``future``; OKX accepts ``trading``.
         """
         # --- Bithumb V2 Override ---
         if self.exchange_id == 'bithumb':
@@ -93,16 +104,19 @@ class CryptoLogic:
         if not self.exchange: return pd.DataFrame()
 
         try:
-            balance = self.exchange.fetch_balance()
+            params = {'type': account_type} if account_type else {}
+            balance = self.exchange.fetch_balance(params)
             data = []
             
             # Different exchanges have different balance structures, but ccxt normalizes most
             items = balance['total'].items()
             
             for currency, amount in items:
-                if amount > 0:
-                    free = balance[currency].get('free', 0)
-                    used = balance[currency].get('used', 0)
+                total = self._to_float(amount)
+                if total > 0:
+                    asset_balance = balance.get(currency) or {}
+                    free = self._to_float(asset_balance.get('free', 0))
+                    used = self._to_float(asset_balance.get('used', 0))
                     avg_price = 0.0
                     
                     # Upbit specific extraction
@@ -117,7 +131,7 @@ class CryptoLogic:
                         'Symbol': currency, 
                         'Free': free,
                         'Used': used,
-                        'Total': amount,
+                        'Total': total,
                         'AvgPrice': avg_price
                     })
             
@@ -171,7 +185,11 @@ class CryptoLogic:
 
     def fetch_positions(self):
         """
-        For Futures: Returns DataFrame of Open Positions.
+        Return open USDT-settled linear futures and swap positions.
+
+        The result intentionally excludes options and coin-margined contracts.  It
+        retains the normalized CCXT fields needed to display and safely close a
+        position instead of treating contract quantity as a spot-asset balance.
         """
         if not self.exchange: return pd.DataFrame()
         
@@ -179,24 +197,98 @@ class CryptoLogic:
             positions = self.exchange.fetch_positions()
             data = []
             for pos in positions:
-                amt = float(pos.get('contracts', 0) or pos.get('info', {}).get('positionAmt', 0))
-                if amt == 0: continue
-                
-                symbol = pos['symbol']
-                entry = float(pos.get('entryPrice', 0))
+                info = pos.get('info') or {}
+                raw_contracts = pos.get('contracts')
+                if raw_contracts in (None, 0, 0.0):
+                    raw_contracts = info.get('positionAmt', info.get('pos', 0))
+                signed_contracts = self._to_float(raw_contracts)
+                contracts = abs(signed_contracts)
+                if contracts == 0:
+                    continue
+
+                settle = str(
+                    pos.get('settle')
+                    or info.get('settleCcy')
+                    or info.get('marginAsset')
+                    or ''
+                ).upper()
+                position_type = str(pos.get('type') or info.get('instType') or '').lower()
+                linear = pos.get('linear')
+
+                # CCXT exposes a normalized ``linear`` flag for supported exchanges.
+                # The settlement fallback keeps older CCXT responses compatible.
+                if settle != 'USDT' or linear is False or position_type not in ('swap', 'future'):
+                    continue
+
+                symbol = pos.get('symbol')
+                if not symbol:
+                    continue
+                side = str(pos.get('side') or '').lower()
+                if side not in ('long', 'short'):
+                    side = 'short' if signed_contracts < 0 else 'long'
+
+                entry = self._to_float(pos.get('entryPrice', info.get('avgPx', info.get('entryPrice', 0))))
+                mark = self._to_float(pos.get('markPrice', info.get('markPx', 0)))
+                contract_size = self._to_float(pos.get('contractSize', 1), 1.0)
+                notional = abs(self._to_float(pos.get('notional', info.get('notionalUsd', 0))))
+                if notional == 0 and mark > 0:
+                    notional = contracts * contract_size * mark
+                unrealized_pnl = self._to_float(
+                    pos.get('unrealizedPnl', info.get('upl', info.get('unrealizedProfit', 0)))
+                )
                 
                 data.append({
                     'Symbol': symbol,
                     'Free': 0,
                     'Used': 0,
-                    'Total': abs(amt), 
-                    'AvgPrice': entry
+                    'Total': contracts,
+                    'AvgPrice': entry,
+                    'MarkPrice': mark,
+                    'Notional': notional,
+                    'UnrealizedPnl': unrealized_pnl,
+                    'ContractSize': contract_size,
+                    'Side': side,
+                    'Hedged': bool(pos.get('hedged', False)),
+                    'Settle': settle,
+                    'PositionType': position_type,
                 })
             return pd.DataFrame(data)
         except Exception as e:
-            # self.logger.error(f"Error fetching positions for {self.exchange_id}: {e}")
-            # Silence this error if market type isn't supported or if it's spot trying to fetch pos
+            self.logger.error(f"Error fetching positions for {self.exchange_id}: {e}")
             return pd.DataFrame()
+
+    def close_futures_position(self, symbol, amount, side, hedged=False):
+        """Close an existing futures position without allowing a reversal/opening order."""
+        if not self.exchange:
+            return None
+
+        position_side = str(side or '').lower()
+        contracts = self._to_float(amount)
+        if position_side not in ('long', 'short') or contracts <= 0:
+            self.logger.error(
+                f"Invalid futures close request on {self.exchange_id}: "
+                f"side={side}, amount={amount}"
+            )
+            return None
+
+        close_side = 'sell' if position_side == 'long' else 'buy'
+        params = {'reduceOnly': True}
+        # CCXT translates ``hedged`` to Binance positionSide / OKX posSide while
+        # preserving the opposite order side required to close the position.
+        if hedged:
+            params['hedged'] = True
+
+        try:
+            order = self.exchange.create_order(
+                symbol, 'market', close_side, contracts, None, params
+            )
+            self.logger.info(
+                f"CLOSED {position_side.upper()} {contracts} of {symbol} on {self.exchange_id}"
+            )
+            return order
+        except Exception as e:
+            self.logger.error(f"Failed to close futures position on {self.exchange_id}: {e}")
+            return None
 
     def fetch_ticker(self, symbol):
         if not self.exchange: return None

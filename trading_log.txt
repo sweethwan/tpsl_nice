@@ -29,3 +29,200 @@
 2026-02-07 19:37:15,380 - INFO - Connected okx (spot)
 2026-02-07 19:37:23,994 - INFO - binance Connected. Mode: Futures (USD-M)
 2026-02-07 19:37:23,994 - INFO - Connected binance (future)
+2026-06-16 09:53:06,725 - INFO - binance Connected. Mode: Spot
+2026-06-16 09:53:06,730 - INFO - Connected binance (spot)
+2026-06-16 09:53:10,307 - INFO - Disconnected binance
+2026-06-16 09:53:24,224 - INFO - bithumb Connected. Mode: Spot
+2026-06-16 09:53:24,225 - INFO - Connected bithumb (spot)
+2026-06-16 09:53:28,266 - ERROR - Bithumb V2 Balance Error: 401 {"error":{"name":"invalid_access_key"}}
+2026-06-16 09:53:35,128 - ERROR - Bithumb V2 Balance Error: 401 {"error":{"name":"invalid_access_key"}}
+2026-06-16 09:53:41,966 - ERROR - Bithumb V2 Balance Error: 401 {"error":{"name":"invalid_access_key"}}
+2026-06-16 09:53:49,010 - ERROR - Bithumb V2 Balance Error: 401 {"error":{"name":"invalid_access_key"}}
+2026-06-16 09:53:52,294 - INFO - Disconnected bithumb
+2026-06-16 09:54:14,663 - INFO - upbit Connected. Mode: Spot
+2026-06-16 09:54:14,663 - INFO - Connected upbit (spot)
+2026-06-16 09:54:42,071 - INFO - bithumb Connected. Mode: Spot
+2026-06-16 09:54:42,071 - INFO - Connected bithumb (spot)
+2026-06-16 09:55:34,902 - INFO - okx Connected. Mode: Spot
+2026-06-16 09:55:34,902 - INFO - Connected okx (spot)
+2026-06-16 09:56:01,639 - INFO - binance Connected. Mode: Spot
+2026-06-16 09:56:01,639 - INFO - Connected binance (spot)
+2026-06-16 09:56:56,766 - INFO - Disconnected binance
+2026-06-16 09:57:00,452 - INFO - binance Connected. Mode: Futures (USD-M)
+2026-06-16 09:57:00,452 - INFO - Connected binance (future)
+2026-06-16 09:58:23,937 - INFO - binance Connected. Mode: Futures (USD-M)
+2026-06-16 09:58:23,937 - INFO - Connected binance (future)
+2026-06-16 09:58:28,666 - INFO - okx Connected. Mode: Spot
+2026-06-16 09:58:28,667 - INFO - Connected okx (spot)
+2026-06-16 09:58:31,813 - INFO - bithumb Connected. Mode: Spot
+2026-06-16 09:58:31,825 - INFO - Connected bithumb (spot)
+2026-06-16 09:58:34,785 - INFO - upbit Connected. Mode: Spot
+2026-06-16 09:58:34,785 - INFO - Connected upbit (spot)
+2026-06-20 22:13:05,361 - INFO - bithumb Connected. Mode: Spot
+2026-06-20 22:13:05,362 - INFO - Connected bithumb (spot)
+2026-06-20 22:13:19,042 - INFO - Disconnected bithumb
+2026-06-20 22:35:13,688 - INFO - bithumb Connected. Mode: Spot
+2026-06-20 22:35:13,689 - INFO - Connected bithumb (spot)
+2026-06-20 22:35:21,872 - ERROR - Bithumb V2 Balance Error: 401 {"error":{"name":"invalid_access_key"}}
+2026-06-20 22:35:29,607 - ERROR - Bithumb V2 Balance Error: 401 {"error":{"name":"invalid_access_key"}}
+2026-06-20 22:35:36,875 - ERROR - Bithumb V2 Balance Error: 401 {"error":{"name":"invalid_access_key"}}
+2026-06-20 22:35:44,476 - ERROR - Bithumb V2 Balance Error: 401 {"error":{"name":"invalid_access_key"}}
+2026-06-20 22:35:51,684 - ERROR - Bithumb V2 Balance Error: 401 {"error":{"name":"invalid_access_key"}}
+2026-06-20 22:35:59,126 - ERROR - Bithumb V2 Balance Error: 401 {"error":{"name":"invalid_access_key"}}
+2026-06-20 22:36:04,353 - INFO - Disconnected bithumb
+2026-06-20 22:36:20,841 - INFO - bithumb Connected. Mode: Spot
+2026-06-20 22:36:20,842 - INFO - Connected bithumb (spot)
+2026-06-20 22:36:48,503 - INFO - Disconnected bithumb
+2026-06-20 22:37:52,365 - INFO - okx Connected. Mode: Spot
+2026-06-20 22:37:52,369 - INFO - Connected okx (spot)
+2026-06-20 22:37:54,902 - ERROR - Error fetching balance for okx: okx {"msg":"Request header OK-ACCESS-PASSPHRASE incorrect.","code":"50105"}
+2026-06-20 22:38:00,965 - ERROR - Error fetching balance for okx: okx {"msg":"Request header OK-ACCESS-PASSPHRASE incorrect.","code":"50105"}
+2026-06-20 22:38:06,953 - ERROR - Error fetching balance for okx: okx {"msg":"Request header OK-ACCESS-PASSPHRASE incorrect.","code":"50105"}
+2026-06-20 22:38:13,012 - ERROR - Error fetching balance for okx: okx {"msg":"Request header OK-ACCESS-PASSPHRASE incorrect.","code":"50105"}
+2026-06-20 22:38:19,066 - ERROR - Error fetching balance for okx: okx {"msg":"Request header OK-ACCESS-PASSPHRASE incorrect.","code":"50105"}
+2026-06-20 22:38:19,249 - INFO - Disconnected okx
+2026-06-20 22:38:40,095 - INFO - binance Connected. Mode: Futures (USD-M)
+2026-06-20 22:38:40,095 - INFO - Connected binance (future)
+2026-06-20 22:38:51,568 - INFO - Disconnected binance
+2026-06-20 22:41:05,112 - INFO - okx Connected. Mode: Spot
+2026-06-20 22:41:05,113 - INFO - Connected okx (spot)
+2026-06-20 22:41:11,899 - ERROR - Error fetching balance for okx: okx {"msg":"Request header OK-ACCESS-PASSPHRASE incorrect.","code":"50105"}
+2026-06-20 22:41:14,964 - INFO - Disconnected okx
+2026-06-20 22:41:44,461 - INFO - okx Connected. Mode: Spot
+2026-06-20 22:41:44,461 - INFO - Connected okx (spot)
+2026-06-20 22:42:03,716 - INFO - Disconnected okx
+2026-06-22 15:44:29,232 - INFO - binance Connected. Mode: Futures (USD-M)
+2026-06-22 15:44:29,233 - INFO - Connected binance (future)
+2026-06-22 15:44:35,358 - INFO - okx Connected. Mode: Spot
+2026-06-22 15:44:35,358 - INFO - Connected okx (spot)
+2026-06-22 15:44:41,986 - INFO - upbit Connected. Mode: Spot
+2026-06-22 15:44:41,986 - INFO - Connected upbit (spot)
+2026-06-22 15:44:54,841 - INFO - bithumb Connected. Mode: Spot
+2026-06-22 15:44:54,841 - INFO - Connected bithumb (spot)
+2026-06-29 17:20:21,275 - INFO - binance Connected. Mode: Futures (USD-M)
+2026-06-29 17:20:21,275 - INFO - Connected binance (future)
+2026-06-29 17:20:24,851 - INFO - okx Connected. Mode: Spot
+2026-06-29 17:20:24,852 - INFO - Connected okx (spot)
+2026-06-29 17:20:29,273 - INFO - upbit Connected. Mode: Spot
+2026-06-29 17:20:29,273 - INFO - Connected upbit (spot)
+2026-06-29 17:20:36,772 - INFO - bithumb Connected. Mode: Spot
+2026-06-29 17:20:36,772 - INFO - Connected bithumb (spot)
+2026-07-06 18:13:51,125 - INFO - binance Connected. Mode: Futures (USD-M)
+2026-07-06 18:13:51,126 - INFO - Connected binance (future)
+2026-07-06 18:13:54,282 - INFO - okx Connected. Mode: Spot
+2026-07-06 18:13:54,283 - INFO - Connected okx (spot)
+2026-07-06 18:13:57,517 - INFO - bithumb Connected. Mode: Spot
+2026-07-06 18:13:57,529 - INFO - Connected bithumb (spot)
+2026-07-06 18:14:00,662 - INFO - upbit Connected. Mode: Spot
+2026-07-06 18:14:00,663 - INFO - Connected upbit (spot)
+2026-07-11 19:45:59,185 - INFO - binance Connected. Mode: Futures (USD-M)
+2026-07-11 19:45:59,190 - INFO - Connected binance (future)
+2026-07-11 19:46:02,674 - INFO - okx Connected. Mode: Spot
+2026-07-11 19:46:02,675 - INFO - Connected okx (spot)
+2026-07-11 19:46:06,573 - INFO - bithumb Connected. Mode: Spot
+2026-07-11 19:46:06,573 - INFO - Connected bithumb (spot)
+2026-07-11 19:46:11,028 - INFO - upbit Connected. Mode: Spot
+2026-07-11 19:46:11,028 - INFO - Connected upbit (spot)
+2026-07-14 16:51:12,204 - INFO - binance Connected. Mode: Futures (USD-M)
+2026-07-14 16:51:12,204 - INFO - Connected binance (future)
+2026-07-14 16:51:15,591 - INFO - okx Connected. Mode: Spot
+2026-07-14 16:51:15,591 - INFO - Connected okx (spot)
+2026-07-14 16:51:18,904 - INFO - bithumb Connected. Mode: Spot
+2026-07-14 16:51:18,904 - INFO - Connected bithumb (spot)
+2026-07-14 16:51:22,165 - INFO - upbit Connected. Mode: Spot
+2026-07-14 16:51:22,165 - INFO - Connected upbit (spot)
+2026-07-15 23:50:40,783 - INFO - binance Connected. Mode: Futures (USD-M)
+2026-07-15 23:50:40,784 - INFO - Connected binance (future)
+2026-07-15 23:50:44,161 - INFO - okx Connected. Mode: Spot
+2026-07-15 23:50:44,162 - INFO - Connected okx (spot)
+2026-07-15 23:50:48,075 - INFO - bithumb Connected. Mode: Spot
+2026-07-15 23:50:48,075 - INFO - Connected bithumb (spot)
+2026-07-15 23:50:51,591 - INFO - upbit Connected. Mode: Spot
+2026-07-15 23:50:51,591 - INFO - Connected upbit (spot)
+2026-07-20 18:42:38,273 - INFO - binance Connected. Mode: Futures (USD-M)
+2026-07-20 18:42:38,273 - INFO - Connected binance (future)
+2026-07-20 18:42:41,840 - INFO - okx Connected. Mode: Spot
+2026-07-20 18:42:41,840 - INFO - Connected okx (spot)
+2026-07-20 18:42:45,152 - INFO - bithumb Connected. Mode: Spot
+2026-07-20 18:42:45,153 - INFO - Connected bithumb (spot)
+2026-07-20 18:42:48,402 - INFO - upbit Connected. Mode: Spot
+2026-07-20 18:42:48,403 - INFO - Connected upbit (spot)
+2026-07-27 17:41:18,411 - INFO - binance Connected. Mode: Futures (USD-M)
+2026-07-27 17:41:18,415 - INFO - Connected binance (future)
+2026-07-27 17:41:21,628 - INFO - okx Connected. Mode: Spot
+2026-07-27 17:41:21,628 - INFO - Connected okx (spot)
+2026-07-27 17:41:24,937 - INFO - bithumb Connected. Mode: Spot
+2026-07-27 17:41:24,937 - INFO - Connected bithumb (spot)
+2026-07-27 17:41:28,530 - INFO - upbit Connected. Mode: Spot
+2026-07-27 17:41:28,530 - INFO - Connected upbit (spot)
+2026-08-03 23:07:18,996 - INFO - binance Connected. Mode: Futures (USD-M)
+2026-08-03 23:07:19,001 - INFO - Connected binance (future)
+2026-08-03 23:07:22,657 - INFO - okx Connected. Mode: Spot
+2026-08-03 23:07:22,657 - INFO - Connected okx (spot)
+2026-08-03 23:07:26,436 - INFO - bithumb Connected. Mode: Spot
+2026-08-03 23:07:26,436 - INFO - Connected bithumb (spot)
+2026-08-03 23:07:29,854 - INFO - upbit Connected. Mode: Spot
+2026-08-03 23:07:29,855 - INFO - Connected upbit (spot)
+2026-08-10 16:38:52,996 - INFO - binance Connected. Mode: Futures (USD-M)
+2026-08-10 16:38:52,996 - INFO - Connected binance (future)
+2026-08-10 16:38:56,718 - INFO - okx Connected. Mode: Spot
+2026-08-10 16:38:56,719 - INFO - Connected okx (spot)
+2026-08-10 16:38:59,947 - INFO - bithumb Connected. Mode: Spot
+2026-08-10 16:38:59,947 - INFO - Connected bithumb (spot)
+2026-08-10 16:39:03,782 - INFO - upbit Connected. Mode: Spot
+2026-08-10 16:39:03,782 - INFO - Connected upbit (spot)
+2026-08-10 16:39:05,538 - ERROR - Error fetching balance for okx: '<' not supported between instances of 'NoneType' and 'str'
+2026-08-18 17:38:34,330 - INFO - binance Connected. Mode: Futures (USD-M)
+2026-08-18 17:38:34,331 - INFO - Connected binance (future)
+2026-08-18 17:38:37,300 - INFO - okx Connected. Mode: Spot
+2026-08-18 17:38:37,300 - INFO - Connected okx (spot)
+2026-08-18 17:38:40,328 - INFO - bithumb Connected. Mode: Spot
+2026-08-18 17:38:40,328 - INFO - Connected bithumb (spot)
+2026-08-18 17:38:43,643 - INFO - upbit Connected. Mode: Spot
+2026-08-18 17:38:43,643 - INFO - Connected upbit (spot)
+2026-08-24 17:51:11,541 - INFO - binance Connected. Mode: Futures (USD-M)
+2026-08-24 17:51:11,541 - INFO - Connected binance (future)
+2026-08-24 17:51:14,687 - INFO - okx Connected. Mode: Spot
+2026-08-24 17:51:14,687 - INFO - Connected okx (spot)
+2026-08-24 17:51:18,621 - INFO - bithumb Connected. Mode: Spot
+2026-08-24 17:51:18,622 - INFO - Connected bithumb (spot)
+2026-08-24 17:51:21,785 - INFO - upbit Connected. Mode: Spot
+2026-08-24 17:51:21,797 - INFO - Connected upbit (spot)
+2026-08-31 17:42:28,653 - INFO - binance Connected. Mode: Futures (USD-M)
+2026-08-31 17:42:28,654 - INFO - Connected binance (future)
+2026-08-31 17:42:32,123 - INFO - okx Connected. Mode: Spot
+2026-08-31 17:42:32,123 - INFO - Connected okx (spot)
+2026-08-31 17:42:35,361 - INFO - bithumb Connected. Mode: Spot
+2026-08-31 17:42:35,362 - INFO - Connected bithumb (spot)
+2026-08-31 17:42:38,939 - INFO - upbit Connected. Mode: Spot
+2026-08-31 17:42:38,939 - INFO - Connected upbit (spot)
+2026-09-07 18:36:48,373 - INFO - binance Connected. Mode: Futures (USD-M)
+2026-09-07 18:36:48,378 - INFO - Connected binance (future)
+2026-09-07 18:36:53,064 - INFO - okx Connected. Mode: Spot
+2026-09-07 18:36:53,064 - INFO - Connected okx (spot)
+2026-09-07 18:36:55,907 - INFO - bithumb Connected. Mode: Spot
+2026-09-07 18:36:55,907 - INFO - Connected bithumb (spot)
+2026-09-07 18:36:58,728 - INFO - upbit Connected. Mode: Spot
+2026-09-07 18:36:58,728 - INFO - Connected upbit (spot)
+2026-09-13 13:27:30,946 - INFO - binance Connected. Mode: Futures (USD-M)
+2026-09-13 13:27:30,947 - INFO - Connected binance (future)
+2026-09-13 13:27:34,547 - INFO - okx Connected. Mode: Spot
+2026-09-13 13:27:34,547 - INFO - Connected okx (spot)
+2026-09-13 13:27:38,227 - INFO - bithumb Connected. Mode: Spot
+2026-09-13 13:27:38,228 - INFO - Connected bithumb (spot)
+2026-09-13 13:27:42,043 - INFO - upbit Connected. Mode: Spot
+2026-09-13 13:27:42,044 - INFO - Connected upbit (spot)
+2026-09-14 20:12:07,782 - INFO - binance Connected. Mode: Futures (USD-M)
+2026-09-14 20:12:07,782 - INFO - Connected binance (future)
+2026-09-14 20:12:10,985 - INFO - okx Connected. Mode: Spot
+2026-09-14 20:12:10,985 - INFO - Connected okx (spot)
+2026-09-14 20:12:14,447 - INFO - bithumb Connected. Mode: Spot
+2026-09-14 20:12:14,447 - INFO - Connected bithumb (spot)
+2026-09-14 20:12:17,701 - INFO - upbit Connected. Mode: Spot
+2026-09-14 20:12:17,702 - INFO - Connected upbit (spot)
+2026-09-20 10:26:41,779 - INFO - okx Connected. Mode: Spot
+2026-09-20 10:26:41,784 - INFO - Connected okx (spot)
+2026-09-20 10:26:45,474 - INFO - bithumb Connected. Mode: Spot
+2026-09-20 10:26:45,475 - INFO - Connected bithumb (spot)
+2026-09-20 10:26:49,069 - INFO - upbit Connected. Mode: Spot
+2026-09-20 10:26:49,070 - INFO - Connected upbit (spot)
